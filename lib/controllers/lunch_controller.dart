@@ -115,7 +115,7 @@ class LunchController extends GetxController {
                       () => CheckboxListTile(
                         title: Text(member.name),
                         subtitle: Text(
-                          'Balance: \$${member.balance.toStringAsFixed(2)}',
+                          'Balance: PKR ${member.balance.toStringAsFixed(2)}',
                         ),
                         value: selectedMembers.contains(member.id),
                         onChanged: (value) => toggleMemberSelection(member.id),
@@ -232,10 +232,10 @@ class LunchController extends GetxController {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Current Balance: \$${member.balance.toStringAsFixed(2)}'),
+            Text('Current Balance: PKR ${member.balance.toStringAsFixed(2)}'),
             if (member.balance < 0)
               Text(
-                'Amount Owed: \$${member.balance.abs().toStringAsFixed(2)}',
+                'Amount Owed: PKR ${member.balance.abs().toStringAsFixed(2)}',
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -247,7 +247,7 @@ class LunchController extends GetxController {
               keyboardType: TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Payment Amount',
-                prefixText: '\$',
+                prefixText: 'PKR',
                 border: OutlineInputBorder(),
               ),
             ),

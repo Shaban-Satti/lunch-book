@@ -86,7 +86,7 @@ class LunchMainScreen extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCard(
                         'Total Expenses',
-                        '\$${summary.totalExpenses.toStringAsFixed(2)}',
+                        'PKR ${summary.totalExpenses.toStringAsFixed(2)}',
                         Icons.receipt_long,
                         Colors.blue,
                       ),
@@ -108,7 +108,7 @@ class LunchMainScreen extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCard(
                         'Average Bill',
-                        '\$${summary.averageBill.toStringAsFixed(2)}',
+                        'PKR ${summary.averageBill.toStringAsFixed(2)}',
                         Icons.analytics,
                         Colors.orange,
                       ),
@@ -117,7 +117,7 @@ class LunchMainScreen extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCard(
                         'Outstanding',
-                        '\$${summary.totalOutstanding.toStringAsFixed(2)}',
+                        'PKR ${summary.totalOutstanding.toStringAsFixed(2)}',
                         Icons.pending_actions,
                         Colors.red,
                       ),
@@ -206,7 +206,7 @@ class LunchMainScreen extends StatelessWidget {
             decoration: InputDecoration(
               labelText: 'Total Bill Amount',
               prefixIcon: Icon(Icons.attach_money),
-              prefixText: '\$',
+              prefixText: 'PKR',
               border: OutlineInputBorder(),
             ),
             onChanged: (value) => controller.calculatePerHead(),
@@ -299,7 +299,7 @@ class LunchMainScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '\$${controller.perHeadAmount.value.toStringAsFixed(2)}',
+                                'PKR ${controller.perHeadAmount.value.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -587,12 +587,12 @@ class LunchMainScreen extends StatelessWidget {
           children: [
             Text(DateFormat('MMM dd, yyyy').format(entry.date)),
             Text(
-              '${entry.memberCount} members • \$${entry.perHeadAmount.toStringAsFixed(2)} per head',
+              '${entry.memberCount} members • PKR ${entry.perHeadAmount.toStringAsFixed(2)} per head',
             ),
           ],
         ),
         trailing: Text(
-          '\$${entry.totalBill.toStringAsFixed(2)}',
+          'PKR ${entry.totalBill.toStringAsFixed(2)}',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -621,8 +621,8 @@ class LunchMainScreen extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Paid: \$${member.totalPaid.toStringAsFixed(2)}'),
-            Text('Owed: \$${member.totalOwed.toStringAsFixed(2)}'),
+            Text('Paid: PKR ${member.totalPaid.toStringAsFixed(2)}'),
+            Text('Owed: PKR ${member.totalOwed.toStringAsFixed(2)}'),
           ],
         ),
         trailing: Column(
@@ -638,7 +638,7 @@ class LunchMainScreen extends StatelessWidget {
               ),
             ),
             Text(
-              '\$${member.balance.abs().toStringAsFixed(2)}',
+              'PKR ${member.balance.abs().toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -672,7 +672,7 @@ class LunchMainScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '\$${entry.totalBill.toStringAsFixed(2)}',
+              'PKR ${entry.totalBill.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -695,7 +695,7 @@ class LunchMainScreen extends StatelessWidget {
                   children: [
                     Expanded(child: Text('Members: ${entry.memberCount}')),
                     Text(
-                      'Per Head: \$${entry.perHeadAmount.toStringAsFixed(2)}',
+                      'Per Head: PKR ${entry.perHeadAmount.toStringAsFixed(2)}',
                     ),
                   ],
                 ),
