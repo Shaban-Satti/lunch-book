@@ -1,13 +1,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- For Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    
+    <!-- For Android 10-12 (API 29-32) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    
+    <!-- For Android 9 and below (API 28 and below) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="28" />
+    
+    <!-- Internet permission if needed for other features -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
 
     <application
         android:label="lunch_book"
         android:name="${applicationName}"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">
-        
+        <!-- Add this to support legacy external storage for Android 10+ -->
+        <meta-data
+            android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+            android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
