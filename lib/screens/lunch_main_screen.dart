@@ -568,13 +568,13 @@ class LunchMainScreen extends StatelessWidget {
                 ListTile(
                   leading: Icon(Icons.info),
                   title: Text('Version'),
-                  subtitle: Text('1.1.0'),
+                  subtitle: Text('1.0.1'),
                 ),
                 Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.developer_mode),
                   title: Text('Developer'),
-                  subtitle: Text('Your Company Name'),
+                  subtitle: Text('Shaban Satti'),
                 ),
                 Divider(height: 1),
                 ListTile(
