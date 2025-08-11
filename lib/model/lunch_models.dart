@@ -1,6 +1,4 @@
-// lib/models/lunch_models.dart
 import 'package:hive/hive.dart';
-
 part 'lunch_models.g.dart';
 
 @HiveType(typeId: 0)
@@ -130,7 +128,7 @@ class Payment extends HiveObject {
   final DateTime date;
 
   @HiveField(4)
-  final String type; // 'payment' or 'settlement'
+  final String type; // 'payment', 'settlement', 'custom_credit', 'custom_debit'
 
   @HiveField(5)
   final String? notes;
@@ -147,6 +145,29 @@ class Payment extends HiveObject {
     this.notes,
     required this.createdAt,
   });
+
+  // Helper methods to check payment type
+  bool get isRegularPayment => type == 'payment';
+  bool get isSettlement => type == 'settlement';
+  bool get isCustomCredit => type == 'custom_credit';
+  bool get isCustomDebit => type == 'custom_debit';
+  bool get isCustomAmount => isCustomCredit || isCustomDebit;
+
+  // Get display name for payment type
+  String get typeDisplayName {
+    switch (type) {
+      case 'payment':
+        return 'Payment';
+      case 'settlement':
+        return 'Settlement';
+      case 'custom_credit':
+        return 'Custom Credit';
+      case 'custom_debit':
+        return 'Custom Debit';
+      default:
+        return 'Unknown';
+    }
+  }
 
   Payment copyWith({
     String? id,
@@ -218,5 +239,42 @@ class CSVExportData {
       participants,
       notes,
     ];
+  }
+}
+
+// Member transaction history model
+class MemberTransaction {
+  final String id;
+  final DateTime date;
+  final String type; // 'lunch', 'payment', 'custom_credit', 'custom_debit'
+  final double amount;
+  final String description;
+  final String? notes;
+
+  MemberTransaction({
+    required this.id,
+    required this.date,
+    required this.type,
+    required this.amount,
+    required this.description,
+    this.notes,
+  });
+
+  bool get isCredit => type == 'payment' || type == 'custom_credit';
+  bool get isDebit => type == 'lunch' || type == 'custom_debit';
+
+  String get typeDisplayName {
+    switch (type) {
+      case 'lunch':
+        return 'Lunch Expense';
+      case 'payment':
+        return 'Payment';
+      case 'custom_credit':
+        return 'Custom Credit';
+      case 'custom_debit':
+        return 'Custom Debit';
+      default:
+        return 'Unknown';
+    }
   }
 }

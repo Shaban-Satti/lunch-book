@@ -1,4 +1,3 @@
-// lib/screens/lunch_main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lunch_book/model/lunch_models.dart';
@@ -376,6 +375,11 @@ class LunchMainScreen extends StatelessWidget {
               Row(
                 children: [
                   IconButton(
+                    onPressed: controller.showAddMemberDialog,
+                    icon: Icon(Icons.person_add, color: Colors.green),
+                    tooltip: 'Add Member',
+                  ),
+                  IconButton(
                     onPressed: controller.exportMemberBalancesToCSV,
                     icon: Icon(Icons.file_download),
                     tooltip: 'Export Balances',
@@ -466,6 +470,45 @@ class LunchMainScreen extends StatelessWidget {
           ),
           SizedBox(height: 24),
 
+          // Member Management Section
+          Text(
+            'Member Management',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 12),
+
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.person_add, color: Colors.green),
+                  title: Text('Add New Member'),
+                  subtitle: Text('Add a new member to the group'),
+                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: controller.showAddMemberDialog,
+                ),
+                Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.people, color: Colors.blue),
+                  title: Text('Manage Members'),
+                  subtitle: Text('View, edit, or remove members'),
+                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () =>
+                      controller.currentTab.value = 2, // Go to Members tab
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 24),
+
+          // Export Section
+          Text(
+            'Data Export',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 12),
+
           Card(
             child: Column(
               children: [
@@ -488,7 +531,18 @@ class LunchMainScreen extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: 16),
+          SizedBox(height: 24),
+
+          // Danger Zone
+          Text(
+            'Danger Zone',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          SizedBox(height: 12),
 
           Card(
             child: ListTile(
@@ -514,13 +568,21 @@ class LunchMainScreen extends StatelessWidget {
                 ListTile(
                   leading: Icon(Icons.info),
                   title: Text('Version'),
-                  subtitle: Text('1.0.0'),
+                  subtitle: Text('1.1.0'),
                 ),
                 Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.developer_mode),
                   title: Text('Developer'),
                   subtitle: Text('Your Company Name'),
+                ),
+                Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.new_releases),
+                  title: Text('Features'),
+                  subtitle: Text(
+                    'Member management, custom amounts, export data',
+                  ),
                 ),
               ],
             ),
@@ -617,7 +679,28 @@ class LunchMainScreen extends StatelessWidget {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
-        title: Text(member.name, style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Row(
+          children: [
+            Text(member.name, style: TextStyle(fontWeight: FontWeight.bold)),
+            if (!member.isActive)
+              Container(
+                margin: EdgeInsets.only(left: 8),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'INACTIVE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -647,7 +730,7 @@ class LunchMainScreen extends StatelessWidget {
             ),
           ],
         ),
-        onTap: () => controller.showPaymentDialog(member),
+        onTap: () => controller.showMemberOptionsDialog(member),
       ),
     );
   }

@@ -1,4 +1,3 @@
-// lib/controllers/lunch_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lunch_book/model/lunch_models.dart';
@@ -24,6 +23,9 @@ class LunchController extends GetxController {
   var notesController = TextEditingController();
   var restaurantController = TextEditingController();
   var paymentAmountController = TextEditingController();
+  var memberNameController = TextEditingController();
+  var customAmountController = TextEditingController();
+  var customNoteController = TextEditingController();
   var selectedDate = DateTime.now().obs;
   var perHeadAmount = 0.0.obs;
 
@@ -42,6 +44,9 @@ class LunchController extends GetxController {
     notesController.dispose();
     restaurantController.dispose();
     paymentAmountController.dispose();
+    memberNameController.dispose();
+    customAmountController.dispose();
+    customNoteController.dispose();
     super.onClose();
   }
 
@@ -86,7 +91,7 @@ class LunchController extends GetxController {
     calculatePerHead();
   }
 
-  /// Auto select all members (7 members)
+  /// Auto select all members
   void selectAllMembers() {
     selectedMembers.clear();
     selectedMembers.addAll(members.map((member) => member.id));
@@ -222,6 +227,194 @@ class LunchController extends GetxController {
     }
   }
 
+  /// Add new member
+  Future<void> addNewMember() async {
+    final name = memberNameController.text.trim();
+    if (name.isEmpty) {
+      Get.snackbar('Error', 'Please enter a member name');
+      return;
+    }
+
+    // Check if member already exists
+    if (members.any((member) => member.name.toLowerCase() == name.toLowerCase())) {
+      Get.snackbar('Error', 'Member with this name already exists');
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      await _lunchService.addMember(name);
+      memberNameController.clear();
+      await loadData();
+
+      Get.snackbar(
+        'Success',
+        'Member added successfully!',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      Get.back();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add member: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Delete member
+  Future<void> deleteMember(Member member) async {
+    // Check if member has any balance or entries
+    final hasEntries = lunchEntries.any((entry) => entry.participantIds.contains(member.id));
+    final hasBalance = member.totalPaid != 0 || member.totalOwed != 0;
+
+    if (hasEntries || hasBalance) {
+      Get.dialog(
+        AlertDialog(
+          title: Text('Cannot Delete Member'),
+          content: Text(
+            'This member has existing lunch entries or balance. You can only deactivate them.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                Get.back();
+                deactivateMember(member);
+              },
+              child: Text('Deactivate'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    Get.dialog(
+      AlertDialog(
+        title: Text('Delete Member'),
+        content: Text('Are you sure you want to delete ${member.name}?'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                Get.back();
+                isLoading.value = true;
+                await _lunchService.deleteMember(member.id);
+                await loadData();
+                Get.snackbar(
+                  'Success',
+                  'Member deleted successfully!',
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                );
+              } catch (e) {
+                Get.snackbar('Error', 'Failed to delete member: $e');
+              } finally {
+                isLoading.value = false;
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Deactivate member
+  Future<void> deactivateMember(Member member) async {
+    try {
+      isLoading.value = true;
+      await _lunchService.deactivateMember(member.id);
+      await loadData();
+      Get.snackbar(
+        'Success',
+        'Member deactivated successfully!',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to deactivate member: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Add custom amount to member
+  Future<void> addCustomAmount(String memberId) async {
+    final amount = double.tryParse(customAmountController.text);
+    if (amount == null) {
+      Get.snackbar('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    final note = customNoteController.text.trim();
+    if (note.isEmpty) {
+      Get.snackbar('Error', 'Please enter a note for this custom amount');
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      await _lunchService.addCustomAmount(
+        memberId: memberId,
+        amount: amount,
+        note: note,
+        date: DateTime.now(),
+      );
+
+      customAmountController.clear();
+      customNoteController.clear();
+      await loadData();
+
+      Get.snackbar(
+        'Success',
+        'Custom amount added successfully!',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      Get.back();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add custom amount: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Show add member dialog
+  void showAddMemberDialog() {
+    memberNameController.clear();
+    Get.dialog(
+      AlertDialog(
+        title: Text('Add New Member'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: memberNameController,
+              decoration: InputDecoration(
+                labelText: 'Member Name',
+                prefixIcon: Icon(Icons.person),
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          ElevatedButton(
+            onPressed: addNewMember,
+            child: Text('Add Member'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Show payment dialog
   void showPaymentDialog(Member member) {
     paymentAmountController.clear();
@@ -264,6 +457,105 @@ class LunchController extends GetxController {
     );
   }
 
+  /// Show custom amount dialog
+  void showCustomAmountDialog(Member member) {
+    customAmountController.clear();
+    customNoteController.clear();
+    Get.dialog(
+      AlertDialog(
+        title: Text('Add Custom Amount for ${member.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Current Balance: PKR ${member.balance.toStringAsFixed(2)}'),
+            SizedBox(height: 16),
+            TextField(
+              controller: customAmountController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Amount (+ for credit, - for debit)',
+                prefixText: 'PKR',
+                border: OutlineInputBorder(),
+                helperText: 'Use negative value to deduct amount',
+              ),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: customNoteController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Note/Reason',
+                border: OutlineInputBorder(),
+                hintText: 'e.g., Borrowed money, Extra expense, etc.',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => addCustomAmount(member.id),
+            child: Text('Add Amount'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show member options dialog
+  void showMemberOptionsDialog(Member member) {
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              member.name,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Balance: PKR ${member.balance.toStringAsFixed(2)}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 20),
+            ListTile(
+              leading: Icon(Icons.payment, color: Colors.green),
+              title: Text('Add Payment'),
+              onTap: () {
+                Get.back();
+                showPaymentDialog(member);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.add_box, color: Colors.blue),
+              title: Text('Add Custom Amount'),
+              subtitle: Text('Add credit/debit with note'),
+              onTap: () {
+                Get.back();
+                showCustomAmountDialog(member);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('Delete Member'),
+              onTap: () {
+                Get.back();
+                deleteMember(member);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Clear form
   void clearForm() {
     totalBillController.clear();
@@ -293,24 +585,6 @@ class LunchController extends GetxController {
     }
   }
 
-  /// Export data to CSV
-  // Future<void> exportToCSV() async {
-  //   try {
-  //     isLoading.value = true;
-  //     final filePath = await _lunchService.exportToCSV();
-  //     Get.snackbar(
-  //       'Success',
-  //       'Data exported to: $filePath',
-  //       backgroundColor: Colors.green,
-  //       colorText: Colors.white,
-  //       duration: Duration(seconds: 4),
-  //     );
-  //   } catch (e) {
-  //     Get.snackbar('Error', 'Failed to export data: $e');
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
   Future<String> exportToCSV() async {
     final entries = getAllEntries();
     final members = getAllMembers();
@@ -371,69 +645,21 @@ class LunchController extends GetxController {
     String fileName,
     List<List<String>> csvData,
   ) async {
-    // Request storage permission
     final status = await Permission.storage.request();
     if (!status.isGranted) throw Exception('Storage permission denied');
 
-    // Define path to Downloads/LunchBook folde r
     final baseDir = Directory('/storage/emulated/0/Download');
     final customDir = Directory('${baseDir.path}/LunchBook');
 
-    // Create folder if it doesn't exist
     if (!await customDir.exists()) {
       await customDir.create(recursive: true);
     }
 
-    // Define full file path
     final file = File('${customDir.path}/$fileName.csv');
-
-    // Convert to CSV
     final csv = const ListToCsvConverter().convert(csvData);
-
-    // Write file
     await file.writeAsString(csv);
-
     return file.path;
   }
-  // Future<String> exportToDownloads(
-  //   String fileName,
-  //   List<List<String>> csvData,
-  // ) async {
-  //   // Ask for storage permission
-  //   print('hello');
-  //   final status = await Permission.storage.request();
-  //   if (!status.isGranted) throw Exception('Storage permission denied');
-
-  //   // Get Downloads directory
-  //   final directory = Directory('/storage/emulated/0/Download');
-
-  //   // Create file
-  //   final file = File('${directory.path}/$fileName.csv');
-  //   final csv = const ListToCsvConverter().convert(csvData);
-
-  //   // Write file
-  //   await file.writeAsString(csv);
-  //   return file.path;
-  // }
-
-  /// Export member balances to CSV
-  // Future<void> exportMemberBalances() async {
-  //   try {
-  //     isLoading.value = true;
-  //     final filePath = await _lunchService.exportMemberBalancesToCSV();
-  //     Get.snackbar(
-  //       'Success',
-  //       'Member balances exported to: $filePath',
-  //       backgroundColor: Colors.green,
-  //       colorText: Colors.white,
-  //       duration: Duration(seconds: 4),
-  //     );
-  //   } catch (e) {
-  //     Get.snackbar('Error', 'Failed to export balances: $e');
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
 
   /// Clear all data
   Future<void> clearAllData() async {
@@ -477,9 +703,9 @@ class LunchController extends GetxController {
     return lunchEntries.toList();
   }
 
-  /// Get all members
+  /// Get all members (including inactive)
   List<Member> getAllMembers() {
-    return members.toList();
+    return _lunchService.getAllMembers();
   }
 
   /// Get member by ID
@@ -512,7 +738,6 @@ class LunchController extends GetxController {
 
     if (totalBill > 0) {
       if (members.length == 7) {
-        // Auto select all 7 members
         selectAllMembers();
         Get.snackbar(
           'Auto Selected',
@@ -521,7 +746,6 @@ class LunchController extends GetxController {
           colorText: Colors.white,
         );
       } else {
-        // Show selection dialog
         showMemberSelectionDialog();
       }
     }

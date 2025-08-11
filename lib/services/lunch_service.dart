@@ -1,11 +1,9 @@
-// lib/services/lunch_service.dart
 import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:lunch_book/model/lunch_models.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:csv/csv.dart';
 import 'package:uuid/uuid.dart';
-
 
 class LunchService {
   static const String _membersBoxName = 'members';
@@ -64,36 +62,93 @@ class LunchService {
   /// Initialize default members
   Future<void> _initializeDefaultMembers() async {
     for (String name in defaultMembers) {
-      final member = Member(
-        id: _uuid.v4(),
-        name: name,
-      );
+      final member = Member(id: _uuid.v4(), name: name);
       await _membersBox.put(member.id, member);
     }
   }
 
-  /// Get all members
+  /// Get all members (including inactive)
   List<Member> getAllMembers() {
     return _membersBox.values.toList();
   }
 
-  /// Get active members
+  /// Get active members only
   List<Member> getActiveMembers() {
     return _membersBox.values.where((member) => member.isActive).toList();
   }
 
   /// Add new member
   Future<void> addMember(String name) async {
-    final member = Member(
-      id: _uuid.v4(),
-      name: name,
-    );
+    final member = Member(id: _uuid.v4(), name: name);
     await _membersBox.put(member.id, member);
+  }
+
+  /// Delete member (only if no history)
+  Future<void> deleteMember(String memberId) async {
+    final member = _membersBox.get(memberId);
+    if (member != null) {
+      await _membersBox.delete(memberId);
+    }
+  }
+
+  /// Deactivate member (for members with history)
+  Future<void> deactivateMember(String memberId) async {
+    final member = _membersBox.get(memberId);
+    if (member != null) {
+      final updatedMember = member.copyWith(isActive: false);
+      await _membersBox.put(memberId, updatedMember);
+    }
+  }
+
+  /// Reactivate member
+  Future<void> reactivateMember(String memberId) async {
+    final member = _membersBox.get(memberId);
+    if (member != null) {
+      final updatedMember = member.copyWith(isActive: true);
+      await _membersBox.put(memberId, updatedMember);
+    }
   }
 
   /// Update member
   Future<void> updateMember(Member member) async {
     await _membersBox.put(member.id, member);
+  }
+
+  /// Add custom amount to member with note
+  Future<void> addCustomAmount({
+    required String memberId,
+    required double amount,
+    required String note,
+    required DateTime date,
+  }) async {
+    // Create a payment entry for tracking
+    final payment = Payment(
+      id: _uuid.v4(),
+      memberId: memberId,
+      amount: amount,
+      date: date,
+      type: amount > 0 ? 'custom_credit' : 'custom_debit',
+      notes: note,
+      createdAt: DateTime.now(),
+    );
+
+    await _paymentsBox.put(payment.id, payment);
+
+    // Update member balance
+    final member = _membersBox.get(memberId);
+    if (member != null) {
+      Member updatedMember;
+      if (amount > 0) {
+        // Positive amount is a credit (payment)
+        updatedMember = member.copyWith(totalPaid: member.totalPaid + amount);
+      } else {
+        // Negative amount is a debit (additional owed amount)
+        updatedMember = member.copyWith(
+          totalOwed: member.totalOwed + amount.abs(),
+        );
+      }
+      await _membersBox.put(member.id, updatedMember);
+    }
   }
 
   /// Add lunch entry
@@ -126,7 +181,10 @@ class LunchService {
   }
 
   /// Update member balances after adding entry
-  Future<void> _updateMemberBalances(List<String> participantIds, double perHeadAmount) async {
+  Future<void> _updateMemberBalances(
+    List<String> participantIds,
+    double perHeadAmount,
+  ) async {
     for (String memberId in participantIds) {
       final member = _membersBox.get(memberId);
       if (member != null) {
@@ -176,9 +234,11 @@ class LunchService {
   /// Get entries by date range
   List<LunchEntry> getEntriesByDateRange(DateTime startDate, DateTime endDate) {
     return _entriesBox.values
-        .where((entry) =>
-            entry.date.isAfter(startDate.subtract(Duration(days: 1))) &&
-            entry.date.isBefore(endDate.add(Duration(days: 1))))
+        .where(
+          (entry) =>
+              entry.date.isAfter(startDate.subtract(Duration(days: 1))) &&
+              entry.date.isBefore(endDate.add(Duration(days: 1))),
+        )
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
@@ -207,13 +267,22 @@ class LunchService {
   /// Get lunch summary
   LunchSummary getLunchSummary() {
     final entries = getAllEntries();
-    final members = getAllMembers();
+    final members = getActiveMembers(); // Only active members for summary
 
-    final totalExpenses = entries.fold(0.0, (sum, entry) => sum + entry.totalBill);
+    final totalExpenses = entries.fold(
+      0.0,
+      (sum, entry) => sum + entry.totalBill,
+    );
     final totalEntries = entries.length;
     final averageBill = totalEntries > 0 ? totalExpenses / totalEntries : 0.0;
-    final totalOutstanding = members.fold(0.0, (sum, member) => sum + (member.balance < 0 ? member.balance.abs() : 0));
-    final totalPaid = members.fold(0.0, (sum, member) => sum + member.totalPaid);
+    final totalOutstanding = members.fold(
+      0.0,
+      (sum, member) => sum + (member.balance < 0 ? member.balance.abs() : 0),
+    );
+    final totalPaid = members.fold(
+      0.0,
+      (sum, member) => sum + member.totalPaid,
+    );
 
     return LunchSummary(
       totalExpenses: totalExpenses,
@@ -229,14 +298,11 @@ class LunchService {
   Future<void> clearAllData() async {
     await _entriesBox.clear();
     await _paymentsBox.clear();
-    
+
     // Reset member balances
-    final members = getAllMembers();
+    final members = getActiveMembers();
     for (Member member in members) {
-      final resetMember = member.copyWith(
-        totalPaid: 0.0,
-        totalOwed: 0.0,
-      );
+      final resetMember = member.copyWith(totalPaid: 0.0, totalOwed: 0.0);
       await _membersBox.put(member.id, resetMember);
     }
   }
@@ -266,7 +332,15 @@ class LunchService {
     final memberMap = {for (var member in members) member.id: member.name};
 
     List<List<String>> csvData = [
-      ['Date', 'Restaurant', 'Total Bill', 'Member Count', 'Per Head', 'Participants', 'Notes']
+      [
+        'Date',
+        'Restaurant',
+        'Total Bill',
+        'Member Count',
+        'Per Head',
+        'Participants',
+        'Notes',
+      ],
     ];
 
     for (LunchEntry entry in entries) {
@@ -286,22 +360,28 @@ class LunchService {
     }
 
     String csv = const ListToCsvConverter().convert(csvData);
-    
+
     // Save to file
     final directory = await getExternalStorageDirectory();
     final file = File('${directory!.path}/lunch_book_export.csv');
     await file.writeAsString(csv);
-    
+
     return file.path;
   }
-
 
   /// Export member balances to CSV
   Future<String> exportMemberBalancesToCSV() async {
     final members = getAllMembers();
 
     List<List<String>> csvData = [
-      ['Member Name', 'Total Paid', 'Total Owed', 'Balance', 'Status']
+      [
+        'Member Name',
+        'Total Paid',
+        'Total Owed',
+        'Balance',
+        'Status',
+        'Active',
+      ],
     ];
 
     for (Member member in members) {
@@ -311,16 +391,17 @@ class LunchService {
         member.totalOwed.toStringAsFixed(2),
         member.balance.toStringAsFixed(2),
         member.balance >= 0 ? 'Clear' : 'Owes',
+        member.isActive ? 'Yes' : 'No',
       ]);
     }
 
     String csv = const ListToCsvConverter().convert(csvData);
-    
+
     // Save to file
     final directory = await getExternalStorageDirectory();
     final file = File('${directory!.path}/member_balances_export.csv');
     await file.writeAsString(csv);
-    
+
     return file.path;
   }
 
